@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "run": "web-ext run --firefox=/Applications/Firefox\\ Developer\\ Edition.app/Contents/MacOS/firefox --source-dir=./extension/ --devtools"
+
   },
   "author": "",
   "license": "ISC",
