@@ -21,5 +21,6 @@
   "options_ui": {
     "page": "options/index.html"
   },
-  "permissions": ["scripting", "webRequest", "webRequestBlocking", "<all_urls>"]
+  "permissions": [
+    "scripting", "webRequest", "webRequestBlocking", "<all_urls>", "storage"]
 }
