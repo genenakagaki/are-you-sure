@@ -3,81 +3,148 @@ var DEBUG = true;
 function logger(prefix) {
   if (DEBUG) {
     return (message, object) => {
-      console.debug(`are-you-sure:${prefix}${message}`, object);
+      console.debug(`are-you-sure:${prefix}:${message}`, object);
     }
   }
 }
 
+// -------------
+// Storage 
+// -------------
+
 const whitelistKey = 'whitelist';
 
-function confirmNavigation(urlHref) {
-  const log = logger(confirmNavigation.name);
-  log('', urlHref)
 
-  const url = new URL(urlHref);
+async function resetWhitelist() {
+  browser.storage.local.set({
+    [whitelistKey]: [],
+  })
+}
 
-  if (confirm(`以下のサイトをホワイトリストに追加しますか？\n${url.href}`)) {
-    // TODO: whitelistに追加する
-    console.log("sholud add to wihelist")
+async function getWhitelist() {
+  const log = logger(getWhitelist.name);
+  
+  const {whitelist} = await browser.storage.local.get(whitelistKey);
+  log('whitelist', whitelist)
+
+  if (!whitelist) {
+    log('whitelist is undefined', undefined)
+
+    browser.storage.local.set({
+      [whitelistKey]: [],
+    })
+
+    return [];
   }
+
+  return whitelist;
 }
 
 async function isInWhitelist(url) {
   const log = logger(isInWhitelist.name)
   log('', url)
   
-  return browser.storage.local.get(whitelistKey).then(
-    ({whitelist}) => {
-      log('.storage.get', whitelist)
+  try {
+    const whitelist = await getWhitelist();
+    return whitelist.includes(url.host);
+  } catch (error) {
+    console.error(error);
+  }
+}
 
-      if (!whitelist) {
-        log('.storage.get:whitelist is undefined', whitelist)
+async function addToWhitelist(url) {
+  const whitelist = await getWhitelist();
 
-        browser.storage.local.set({
-          [whitelistKey]: [],
-        })
+  if (!whitelist.includes(url.host)) {
+    whitelist.push(url.host);
+    browser.storage.local.set({
+      [whitelistKey]: whitelist,
+    })
+  }
+}
 
-        return false;
-      }
+// -------------
+// Scripting 
+// -------------
 
-      return whitelist.includes(url.host);
-    },
-    () => {
-      console.error("Error retrieving whitelist");
-      console.debug("isInWhiteList.storage.get.error", url);
-    });
+async function confirmToAddToWhitelist(url, tabId) {
+  const log = logger(confirmToAddToWhitelist.name);
+  log('', url)
+
+  try {
+    const injectionResults = await browser.scripting.executeScript({
+      target: {
+        tabId: tabId,
+      },
+      args: [url.href],
+      func: (urlHref) => {
+        console.log(urlHref)
+        const url = new URL(urlHref);
+        return confirm(`以下のサイトをホワイトリストに追加しますか？\n${url.href}`)
+      } 
+    })
+
+    log(injectionResults.name, injectionResults);
+
+    const shouldAddToWhitelist = injectionResults[0].result;
+    if (shouldAddToWhitelist) {
+      addToWhitelist(url)
+    }
+
+    return shouldAddToWhitelist;
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+
+function isGmailDomain(url) {
+  return url.host === "www.mozilla.org";// "mail.google.com";
+} 
+
+async function onBeforeRequestListener(details) {
+  const log = logger(onBeforeRequestListener.name);
+  // log('', details);
+
+  if (details.tabId === -1) {
+    log('request was not in content (maybe in devtools)')
+    return { cancel: false };
+  }
+
+  const originUrl = new URL(details.originUrl)
+  if (!isGmailDomain(originUrl)) {
+    log('origin domain was not gmail');
+    return { cancel: false };
+  }
+  
+  const url = new URL(details.url);
+  if (isGmailDomain(url) || await isInWhitelist(url)) {
+    log('target domain was in whitelist');
+    return { cancel: false };
+  }
+
+  console.log(details)
+  const shouldNavigate = await confirmToAddToWhitelist(url, details.tabId);
+
+  return { cancel: !shouldNavigate };
 }
 
 browser.webRequest.onBeforeRequest.addListener(
-  async (details) => {
-    console.log("details", details)
-
-    const originUrl = new URL(details.originUrl)
-    // TODO: origin のドメインがGmailかチェックする
-    // manifestでできるかも
-    // ユーザーが指定できるようにするのがいいかも
-    
-    const url = new URL(details.url);
-
-    isInWhiteList(url)
-    
-    // if (domainWhiteList.includes(url.host)) {
-    //   return { cancel: false }; 
-    // } 
-
-    browser.scripting.executeScript({
-      target: {
-        tabId: details.tabId
-      },
-      args: [url.href],
-      func: confirmNavigation 
-    })
-
-    return { cancel: true };
-  },
+  onBeforeRequestListener,
   {
     urls: ["<all_urls>"],
   },
   ["blocking"]
 );
 
+
+//  getWhitelist()
+
+// resetWhitelist()
+
+// isInWhitelist(new URL("https://mail.google.com/mail/u/0/#inbox"))
+//   .then(res => console.log(res))
+
+// addToWhitelist(new URL("https://mail.google.com/mail/u/0/#inbox"));
+
+// confirmToAddToWhitelist(new URL("https://mail.google.com/mail/u/0/#inbox"), 1);
