@@ -22,5 +22,10 @@
     "page": "options/index.html"
   },
   "permissions": [
-    "scripting", "webRequest", "webRequestBlocking", "<all_urls>", "storage"]
+    "webRequest",
+    "webRequestBlocking",
+    "<all_urls>",
+    "scripting",
+    "storage"
+  ]
 }

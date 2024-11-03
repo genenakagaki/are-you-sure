@@ -8,7 +8,7 @@ function logger(prefix) {
   }
 }
 
-const whiteListKey = 'whiteList';
+const whitelistKey = 'whitelist';
 
 function confirmNavigation(urlHref) {
   const log = logger(confirmNavigation.name);
@@ -22,25 +22,28 @@ function confirmNavigation(urlHref) {
   }
 }
 
-function isInWhiteList(url) {
-  const log = logger(isInWhiteList)
+async function isInWhitelist(url) {
+  const log = logger(isInWhitelist.name)
   log('', url)
-
-  browser.storage.local.set({
-    'whiteList': [],
-    'testing': []
-  })
   
-  return browser.storage.local.get(whiteListKey).then(
-    ({whiteList}) => {
-      log('.storage.url', url)
-      log('.storage.get', whiteList)
+  return browser.storage.local.get(whitelistKey).then(
+    ({whitelist}) => {
+      log('.storage.get', whitelist)
 
-      // if (whiteList.includes(url.host)) {
-      //   console.log("here")
-      // } 
+      if (!whitelist) {
+        log('.storage.get:whitelist is undefined', whitelist)
+
+        browser.storage.local.set({
+          [whitelistKey]: [],
+        })
+
+        return false;
+      }
+
+      return whitelist.includes(url.host);
     },
     () => {
+      console.error("Error retrieving whitelist");
       console.debug("isInWhiteList.storage.get.error", url);
     });
 }
@@ -49,13 +52,12 @@ browser.webRequest.onBeforeRequest.addListener(
   async (details) => {
     console.log("details", details)
 
-    // const originUrl = new URL(details.originURL)
+    const originUrl = new URL(details.originUrl)
     // TODO: origin のドメインがGmailかチェックする
     // manifestでできるかも
     // ユーザーが指定できるようにするのがいいかも
     
     const url = new URL(details.url);
-    console.log(url)
 
     isInWhiteList(url)
     
