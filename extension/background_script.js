@@ -99,12 +99,12 @@ async function confirmToAddToWhitelist(url, tabId) {
 
 
 function isGmailDomain(url) {
-  return url.host === "www.mozilla.org";// "mail.google.com";
+  return url.host === "mail.google.com";
 } 
 
 async function onBeforeRequestListener(details) {
   const log = logger(onBeforeRequestListener.name);
-  // log('', details);
+  log('', details);
 
   if (details.tabId === -1) {
     log('request was not in content (maybe in devtools)')
@@ -133,6 +133,7 @@ browser.webRequest.onBeforeRequest.addListener(
   onBeforeRequestListener,
   {
     urls: ["<all_urls>"],
+    types: ["main_frame"],
   },
   ["blocking"]
 );
