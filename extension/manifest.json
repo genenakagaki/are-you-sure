@@ -1,31 +1,23 @@
 {
-  "manifest_version": 2,
+  "manifest_version": 3,
   "name": "are-you-sure",
   "description": "testing",
   "version": "0.0.1",
   "icons": {
     "64": "icons/icon.png"
   },
-  "background": {
-    "scripts": [
-      "background_script.js"
-    ]
-  },
-  "browser_action": {
-    "default_icon": {
-      "64": "icons/icon.png"
-    },
-    "default_popup": "browserAction/index.html",
-    "default_title": "are-you-sure"
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "sample@example.com",
+      "strict_min_version": "109.0"
+    }
   },
   "options_ui": {
     "page": "options/index.html"
   },
   "permissions": [
-    "webRequest",
-    "webRequestBlocking",
-    "<all_urls>",
     "scripting",
-    "storage"
+    "storage",
+    "activeTab"
   ]
 }
